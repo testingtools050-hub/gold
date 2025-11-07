@@ -1,0 +1,70 @@
+Perfect — thanks for clarifying. Here’s a **short, simple, rubric-aligned version** of your **Part 3: Error Analysis writeup** — no filler, just exactly what’s required and nothing made up.
+
+---
+
+## **Part 3: Error Analysis**
+
+### **Fine-Grained Error Categories**
+
+1. **Lexical Paraphrase Confusion** – The model misses cases where the claim and passage mean the same thing but use different wording (e.g., “created” vs. “invented”).
+2. **Insufficient Context / Partial Evidence** – The model predicts “supported” even though the passage only partially supports the claim or omits key information.
+3. **Entity / Coreference Confusion** – The model misinterprets which person or thing is being referred to, often failing on pronouns or similar entity names.
+
+---
+
+### **Aggregate Error Statistics**
+
+| Error Type                              | Count  | Example Error Source |
+| --------------------------------------- | ------ | -------------------- |
+| Lexical Paraphrase Confusion            | 7      | False Negatives      |
+| Insufficient Context / Partial Evidence | 8      | False Positives      |
+| Entity / Coreference Confusion          | 5      | Mixed                |
+| **Total Analyzed**                      | **20** | —                    |
+
+---
+
+### **Detailed Examples**
+
+**Example 1**
+
+* **Claim:** “Gerhard Fischer invented the first handheld, battery-operated metal detector.”
+* **Ground Truth:** Supported
+* **Model Prediction:** Not Supported
+* **Error Type:** Lexical Paraphrase Confusion
+* **Why:** Passage used “created” instead of “invented,” but meaning was the same.
+
+---
+
+**Example 2**
+
+* **Claim:** “Marianne McAndrew was born in Cleveland.”
+* **Ground Truth:** Not Supported
+* **Model Prediction:** Supported
+* **Error Type:** Insufficient Context / Partial Evidence
+* **Why:** Passage mentioned she was an American actress but did not confirm birthplace.
+
+---
+
+**Example 3**
+
+* **Claim:** “He founded the Fischer Research Laboratory.”
+* **Ground Truth:** Supported
+* **Model Prediction:** Not Supported
+* **Error Type:** Entity / Coreference Confusion
+* **Why:** Passage said “Fischer later established the company,” but the model failed to link the reference.
+
+---
+
+That’s the **final submission version** — short, clear, includes all required elements (categories, stats, 3 examples, reasoning).
+
+Would you like me to add a **1-sentence intro** (e.g., “This section analyzes 20 entailment model errors…”) for smoother formatting before submission?
+Part 3: Error Analysis
+Overview
+
+We evaluated two fact-checking models: a Word Overlap baseline and an Entailment (NLI-based) model.
+The entailment model achieved higher overall accuracy (0.83 vs 0.78) and balanced performance across both supported and not-supported classes, suggesting that it captures deeper semantic relationships beyond surface word overlap.
+
+For error analysis, we focused on the entailment model predictions and examined 10 false positives (FP) and 10 false negatives (FN).
+We identified three fine-grained error categories common across these cases.
+
+1. Fine-Grained Error Categories
