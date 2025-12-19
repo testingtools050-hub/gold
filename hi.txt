@@ -1,0 +1,26 @@
+subprocess.run(
+    ["netsh", "trace", "start", "capture=yes", "tracefile=capture.etl"],
+    check=True
+)
+
+print("[+] Capturing traffic for 30 seconds...")
+time.sleep(30)
+
+subprocess.run(["netsh", "trace", "stop"], check=True)
+
+# List active connections involving target IP
+target_ip = "192.168.1.50"
+
+result = subprocess.run(
+    ["netstat", "-ano"],
+    capture_output=True,
+    text=True
+)
+
+filtered = [line for line in result.stdout.splitlines() if target_ip in line]
+
+with open("ip_connections.txt", "w") as f:
+    for line in filtered:
+        f.write(line + "\n")
+
+print("[+] Saved IP-specific connections to ip_connections.txt")
