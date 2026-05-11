@@ -1,0 +1,147 @@
+"""Simple interactive smoke test for LiteLLM via langchain_litellm.
+
+Usage:
+  python litellm_smoke_test.py
+  python litellm_smoke_test.py --prompt "what is the weather in seattle?"
+"""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import os
+import subprocess
+import sys
+
+
+REQUIRED_MODULES = [
+    ("dotenv", "python-dotenv"),
+    ("truststore", "truststore"),
+    ("litellm", "litellm"),
+    ("langchain_core", "langchain-core"),
+    ("langchain_litellm", "langchain-litellm"),
+    ("tokenizers", "tokenizers"),
+]
+
+
+def _has_module(module_name: str) -> bool:
+    return importlib.util.find_spec(module_name) is not None
+
+
+def _install_packages(packages: list[str]) -> None:
+    cmd = [sys.executable, "-m", "pip", "install", "--user", *packages]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Failed to install dependencies automatically.\n"
+            f"Command: {' '.join(cmd)}\n"
+            f"stderr:\n{result.stderr.strip()}"
+        )
+
+
+def ensure_dependencies() -> None:
+    missing = [package for module, package in REQUIRED_MODULES if not _has_module(module)]
+    if not missing:
+        return
+
+    print(f"[setup] Installing missing packages: {', '.join(missing)}")
+    _install_packages(missing)
+
+
+ensure_dependencies()
+
+from dotenv import load_dotenv
+import litellm
+import truststore
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_litellm import ChatLiteLLM
+
+load_dotenv()
+truststore.inject_into_ssl()
+
+
+DEFAULT_MODEL = "openai/claude-haiku-4-5"
+DEFAULT_API_BASE = "https://llm.t-mobile.com/v1"
+
+
+def get_api_key() -> str:
+    key = os.environ.get("LLM_API_KEY")
+    if key:
+        return key
+
+    try:
+        result = subprocess.run(
+            [
+                "powershell",
+                "-Command",
+                "[System.Environment]::GetEnvironmentVariable('LLM_API_KEY','User')",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "LLM_API_KEY not found. Set it in .env or as a user environment variable."
+    )
+
+
+def ask_once(llm: ChatLiteLLM, question: str) -> str:
+    messages = [
+        SystemMessage(content="You are a helpful assistant. Keep answers concise."),
+        HumanMessage(content=question),
+    ]
+    reply = llm.invoke(messages)
+    return str(reply.content)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="LiteLLM smoke test")
+    parser.add_argument("--model", default=DEFAULT_MODEL, help="Model name")
+    parser.add_argument("--api-base", default=DEFAULT_API_BASE, help="LiteLLM/OpenAI-compatible API base")
+    parser.add_argument("--prompt", default="", help="Run one prompt and exit")
+    parser.add_argument(
+        "--strict-ssl",
+        action="store_true",
+        help="Enable strict TLS verification (default is disabled for internal gateway smoke tests)",
+    )
+    args = parser.parse_args()
+
+    # Internal gateways often use enterprise cert chains; disable strict verify by default
+    # for quick smoke testing. Use --strict-ssl to enforce certificate verification.
+    litellm.ssl_verify = args.strict_ssl
+
+    llm = ChatLiteLLM(
+        model=args.model,
+        api_base=args.api_base,
+        api_key=get_api_key(),
+        temperature=0,
+    )
+
+    if args.prompt:
+        print("Q:", args.prompt)
+        print("A:", ask_once(llm, args.prompt))
+        return
+
+    print("LiteLLM smoke test ready. Type a question, or 'quit' to exit.")
+    while True:
+        question = input("You: ").strip()
+        if question.lower() in {"quit", "exit", "q"}:
+            print("Bye.")
+            break
+        if not question:
+            continue
+
+        try:
+            answer = ask_once(llm, question)
+            print("AI:", answer)
+        except Exception as exc:
+            print(f"[error] Request failed: {exc}")
+
+
+if __name__ == "__main__":
+    main()
