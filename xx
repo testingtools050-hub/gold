@@ -1,0 +1,6 @@
+
+
+
+
+
+adb shell "tar czf - --exclude=/proc --exclude=/sys --exclude=/dev --exclude=/tmp / 2>/dev/null" > "/mnt/c/Users/AMahmoo24/OneDrive - T-Mobile USA/Downloads/fs_full.tar.gz"
